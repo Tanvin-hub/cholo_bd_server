@@ -4,6 +4,12 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 require("dotenv").config();
 
+// SSL Commerce
+const SSLCommerzPayment = require('sslcommerz-lts')
+const store_id = process.env.STORE_ID;
+const store_passwd = process.env.STORE_PASSWORD;
+const is_live = false; //true for live, false for sandbox
+
 const port = process.env.PORT || 5000;
 
 // middleware
@@ -26,12 +32,53 @@ async function run() {
     const offersCollection = client.db("cholo-BD").collection("offers");
     const usersBookingCollection = client.db("cholo-BD").collection("booking");
     const bookedDataCollection = client.db("cholo-BD").collection("booked");
-    const offerBookingCollection = client
-      .db("cholo-BD")
-      .collection("offerBooked");
-    const adminServicesCollection = client
-      .db("cholo-BD")
-      .collection("admin-services");
+    const offerBookingCollection = client.db("cholo-BD").collection("offerBooked");
+    const adminServicesCollection = client.db("cholo-BD").collection("admin-services");
+    const bookingCollection = client.db("cholo-BD").collection("bookings");
+
+    // Orders
+    app.post("/bookings", async(req, res) => {
+      const booking = req.body;
+      const bookingProduct = await tripsCollection.findOne({_id: new ObjectId(booking.serviceID)}) 
+
+      const data = {
+        total_amount: 100,
+        currency: 'BDT',
+        tran_id: new ObjectId().toString(), // use unique tran_id for each api call
+        success_url: 'http://localhost:3030/success',
+        fail_url: 'http://localhost:3030/fail',
+        cancel_url: 'http://localhost:3030/cancel',
+        ipn_url: 'http://localhost:3030/ipn',
+        shipping_method: 'Courier',
+        product_name: 'Computer.',
+        product_category: 'Electronic',
+        product_profile: 'general',
+        cus_name: "",
+        cus_email: "example@gmail.com",
+        cus_add1: 'Dhaka',
+        cus_add2: 'Dhaka',
+        cus_city: 'Dhaka',
+        cus_state: 'Dhaka',
+        cus_postcode: '1000',
+        cus_country: 'Bangladesh',
+        cus_phone: booking.phone,
+        cus_fax: '01711111111',
+        ship_name: 'Customer Name',
+        ship_add1: 'Dhaka',
+        ship_add2: 'Dhaka',
+        ship_city: 'Dhaka',
+        ship_state: 'Dhaka',
+        ship_postcode: 1000,
+        ship_country: 'Bangladesh',
+    };
+    const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+    sslcz.init(data).then(apiResponse => {
+        // Redirect the user to payment gateway
+        let GatewayPageURL = apiResponse.GatewayPageURL
+        res.send({url: GatewayPageURL})
+        // console.log('Redirecting to: ', apiResponse)
+    });
+    })
 
     // users
     app.post("/users", async (req, res) => {
@@ -41,10 +88,24 @@ async function run() {
     });
 
     // Get User  By Email
+  app.get("/users", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await usersCollection.findOne(query);
+      res.send(result);
+    });
+
     app.get("/all-users", async (req, res) => {
       const query = {};
       const result = await usersCollection.find(query).toArray();
       res.send(result);
+    });
+
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      res.send({ isAdmin: user?.role === "admin" });
     });
 
     app.get("/trips", async (req, res) => {
