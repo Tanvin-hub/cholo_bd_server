@@ -5,7 +5,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 // SSL Commerce
-const SSLCommerzPayment = require('sslcommerz-lts')
+const SSLCommerzPayment = require("sslcommerz-lts");
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
@@ -30,55 +30,104 @@ async function run() {
     const tabsCollection = client.db("cholo-BD").collection("tabs");
     const reviewsCollection = client.db("cholo-BD").collection("reviews");
     const offersCollection = client.db("cholo-BD").collection("offers");
-    const usersBookingCollection = client.db("cholo-BD").collection("booking");
-    const bookedDataCollection = client.db("cholo-BD").collection("booked");
-    const offerBookingCollection = client.db("cholo-BD").collection("offerBooked");
-    const adminServicesCollection = client.db("cholo-BD").collection("admin-services");
+    const offerBookingCollection = client
+      .db("cholo-BD")
+      .collection("offerBooked");
+    const adminServicesCollection = client
+      .db("cholo-BD")
+      .collection("admin-services");
     const bookingCollection = client.db("cholo-BD").collection("bookings");
 
     // Orders
-    app.post("/bookings", async(req, res) => {
+    app.get("/bookings", async (req, res) => {
+      const query = {};
+      const result = await bookingCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/bookings", async (req, res) => {
       const booking = req.body;
-      const bookingProduct = await tripsCollection.findOne({_id: new ObjectId(booking.serviceID)}) 
+      const bookingProduct = await tripsCollection.findOne({
+        _id: new ObjectId(booking.serviceID),
+      });
+      console.log(bookingProduct);
+      const transectionId = new ObjectId().toString();
 
       const data = {
         total_amount: 100,
-        currency: 'BDT',
-        tran_id: new ObjectId().toString(), // use unique tran_id for each api call
-        success_url: 'http://localhost:3030/success',
-        fail_url: 'http://localhost:3030/fail',
-        cancel_url: 'http://localhost:3030/cancel',
-        ipn_url: 'http://localhost:3030/ipn',
-        shipping_method: 'Courier',
-        product_name: 'Computer.',
-        product_category: 'Electronic',
-        product_profile: 'general',
+        currency: "BDT",
+        tran_id: transectionId, // use unique tran_id for each api call
+        success_url: `${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`,
+        fail_url: `${process.env.CLIENT_URL}/payment/fail?transectionId=${transectionId}`,
+        cancel_url: `${process.env.CLIENT_URL}/payment/cancel`,
+        ipn_url: `${process.env.CLIENT_URL}/ipn`,
+        shipping_method: "Courier",
+        product_name: "Computer.",
+        product_category: "Electronic",
+        product_profile: "general",
         cus_name: "",
         cus_email: "example@gmail.com",
-        cus_add1: 'Dhaka',
-        cus_add2: 'Dhaka',
-        cus_city: 'Dhaka',
-        cus_state: 'Dhaka',
-        cus_postcode: '1000',
-        cus_country: 'Bangladesh',
+        cus_add1: "Dhaka",
+        cus_add2: "Dhaka",
+        cus_city: "Dhaka",
+        cus_state: "Dhaka",
+        cus_postcode: "1000",
+        cus_country: "Bangladesh",
         cus_phone: booking.phone,
-        cus_fax: '01711111111',
-        ship_name: 'Customer Name',
-        ship_add1: 'Dhaka',
-        ship_add2: 'Dhaka',
-        ship_city: 'Dhaka',
-        ship_state: 'Dhaka',
+        cus_fax: "01711111111",
+        ship_name: "Customer Name",
+        ship_add1: "Dhaka",
+        ship_add2: "Dhaka",
+        ship_city: "Dhaka",
+        ship_state: "Dhaka",
         ship_postcode: 1000,
-        ship_country: 'Bangladesh',
-    };
-    const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
-    sslcz.init(data).then(apiResponse => {
+        ship_country: "Bangladesh",
+      };
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
+      sslcz.init(data).then((apiResponse) => {
         // Redirect the user to payment gateway
-        let GatewayPageURL = apiResponse.GatewayPageURL
-        res.send({url: GatewayPageURL})
+        let GatewayPageURL = apiResponse.GatewayPageURL;
+        bookingCollection.insertOne({
+          ...booking,
+          price: booking.price,
+          transectionId,
+          paid: false,
+        });
+        res.send({ url: GatewayPageURL });
         // console.log('Redirecting to: ', apiResponse)
+      });
     });
-    })
+
+    app.post("/payment/success", async (req, res) => {
+      const { transectionId } = req.query;
+      const result = await bookingCollection.updateOne(
+        { transectionId },
+        { $set: { paid: true, paidAt: new Date() } }
+      );
+      if (result.modifiedCount > 0) {
+        res.redirect(
+          `${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`
+        );
+      }
+    });
+
+    app.post("/payment/fail", async (req, res) => {
+      const { transactionId } = req.query;
+      if (!transactionId) {
+        return res.redirect(`${process.env.CLIENT_URL}/payment/fail`);
+      }
+      const result = await bookingCollection.deleteOne({ transactionId });
+      if (result.deletedCount) {
+        res.redirect(`${process.env.CLIENT_URL}/payment/fail`);
+      }
+    });
+
+    app.get("/orders/by-transaction-id/:id", async (req, res) => {
+      const { id } = req.params;
+      const order = await bookingCollection.findOne({ transactionId: id });
+      console.log(id, order);
+      res.send(order);
+    });
 
     // users
     app.post("/users", async (req, res) => {
@@ -88,7 +137,7 @@ async function run() {
     });
 
     // Get User  By Email
-  app.get("/users", async (req, res) => {
+    app.get("/users", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await usersCollection.findOne(query);
