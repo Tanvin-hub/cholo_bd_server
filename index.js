@@ -268,6 +268,13 @@ async function run() {
       const result = await adminServicesCollection.deleteOne(query);
       res.send(result);
     });
+
+    app.delete("/all-users/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
   } finally {
   }
 }
