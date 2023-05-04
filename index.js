@@ -28,14 +28,10 @@ async function run() {
     const usersCollection = client.db("cholo-BD").collection("users");
     const tripsCollection = client.db("cholo-BD").collection("trips");
     const tabsCollection = client.db("cholo-BD").collection("tabs");
-    const reviewsCollection = client.db("cholo-BD").collection("reviews");
+    const testimonialCollection = client.db("cholo-BD").collection("testimonials");
     const offersCollection = client.db("cholo-BD").collection("offers");
-    const offerBookingCollection = client
-      .db("cholo-BD")
-      .collection("offerBooked");
-    const adminServicesCollection = client
-      .db("cholo-BD")
-      .collection("admin-services");
+    const offerBookingCollection = client.db("cholo-BD").collection("offerBooked");
+    const adminServicesCollection = client.db("cholo-BD").collection("admin-services");
     const bookingCollection = client.db("cholo-BD").collection("bookings");
 
     // Orders
@@ -50,17 +46,16 @@ async function run() {
       const bookingProduct = await tripsCollection.findOne({
         _id: new ObjectId(booking.serviceID),
       });
-      console.log(bookingProduct);
       const transectionId = new ObjectId().toString();
 
       const data = {
         total_amount: 100,
         currency: "BDT",
         tran_id: transectionId, // use unique tran_id for each api call
-        success_url: `${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`,
-        fail_url: `${process.env.CLIENT_URL}/payment/fail?transectionId=${transectionId}`,
-        cancel_url: `${process.env.CLIENT_URL}/payment/cancel`,
-        ipn_url: `${process.env.CLIENT_URL}/ipn`,
+        success_url: `http://localhost:3000/payment/success?transectionId=${transectionId}`,
+        fail_url: `http://localhost:3000/payment/fail?transectionId=${transectionId}`,
+        cancel_url: `http://localhost:3000/payment/cancel`,
+        ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: "Computer.",
         product_category: "Electronic",
@@ -89,13 +84,18 @@ async function run() {
         let GatewayPageURL = apiResponse.GatewayPageURL;
         bookingCollection.insertOne({
           ...booking,
-          price: booking.price,
           transectionId,
           paid: false,
         });
         res.send({ url: GatewayPageURL });
-        // console.log('Redirecting to: ', apiResponse)
       });
+    });
+
+    app.delete("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
     });
 
     app.post("/payment/success", async (req, res) => {
@@ -105,27 +105,24 @@ async function run() {
         { $set: { paid: true, paidAt: new Date() } }
       );
       if (result.modifiedCount > 0) {
-        res.redirect(
-          `${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`
-        );
+        res.redirect(`http://localhost:3000/payment/success?transectionId=${transectionId}`);
       }
     });
 
     app.post("/payment/fail", async (req, res) => {
       const { transactionId } = req.query;
       if (!transactionId) {
-        return res.redirect(`${process.env.CLIENT_URL}/payment/fail`);
+        return res.redirect(`http://localhost:3000/payment/fail`);
       }
       const result = await bookingCollection.deleteOne({ transactionId });
       if (result.deletedCount) {
-        res.redirect(`${process.env.CLIENT_URL}/payment/fail`);
+        res.redirect(`http://localhost:3000/payment/fail`);
       }
     });
 
-    app.get("/orders/by-transaction-id/:id", async (req, res) => {
+    app.get("/bookings/by-transaction-id/:id", async (req, res) => {
       const { id } = req.params;
       const order = await bookingCollection.findOne({ transactionId: id });
-      console.log(id, order);
       res.send(order);
     });
 
@@ -192,16 +189,16 @@ async function run() {
     });
 
     // Reviews Collection
-    app.get("/reviews", async (req, res) => {
+    app.get("/testimonials", async (req, res) => {
       let query = {};
-      const cursor = reviewsCollection.find(query);
-      const reviews = await cursor.toArray();
-      res.send(reviews);
+      const cursor = testimonialCollection.find(query);
+      const testimonials = await cursor.toArray();
+      res.send(testimonials);
     });
 
     app.post("/reviews", async (req, res) => {
       const reviews = req.body;
-      const result = await reviewsCollection.insertOne(reviews);
+      const result = await testimonialCollection.insertOne(reviews);
       res.send(result);
     });
 
@@ -230,7 +227,7 @@ async function run() {
     app.get("/bookingData", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
-      const bookingData = await usersBookingCollection.find(query).toArray();
+      const bookingData = await bookingCollection.find(query).toArray();
       res.send(bookingData);
     });
 
