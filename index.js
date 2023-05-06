@@ -46,6 +46,7 @@ async function run() {
       const bookingProduct = await tripsCollection.findOne({
         _id: new ObjectId(booking.serviceID),
       });
+      console.log(bookingProduct)
       const transectionId = new ObjectId().toString();
 
       const data = {
