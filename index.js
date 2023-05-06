@@ -43,14 +43,19 @@ async function run() {
 
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
+      const {userEmail, tourName, fullName, phone, totalAmount } = booking;
+
+      if(!userEmail || !tourName) {
+        return res.send({ error: "Please provide all the information"});
+      }
+
       const bookingProduct = await tripsCollection.findOne({
         _id: new ObjectId(booking.serviceID),
       });
-      console.log(bookingProduct)
       const transectionId = new ObjectId().toString();
 
       const data = {
-        total_amount: 100,
+        total_amount: totalAmount,
         currency: "BDT",
         tran_id: transectionId, // use unique tran_id for each api call
         success_url: `http://localhost:3000/payment/success?transectionId=${transectionId}`,
@@ -58,18 +63,18 @@ async function run() {
         cancel_url: `http://localhost:3000/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
-        product_name: "Computer.",
+        product_name: tourName,
         product_category: "Electronic",
         product_profile: "general",
-        cus_name: "",
-        cus_email: "example@gmail.com",
+        cus_name: fullName,
+        cus_email: userEmail,
         cus_add1: "Dhaka",
         cus_add2: "Dhaka",
         cus_city: "Dhaka",
         cus_state: "Dhaka",
         cus_postcode: "1000",
         cus_country: "Bangladesh",
-        cus_phone: booking.phone,
+        cus_phone: phone,
         cus_fax: "01711111111",
         ship_name: "Customer Name",
         ship_add1: "Dhaka",
@@ -83,6 +88,7 @@ async function run() {
       sslcz.init(data).then((apiResponse) => {
         // Redirect the user to payment gateway
         let GatewayPageURL = apiResponse.GatewayPageURL;
+        // console.log(apiResponse);
         bookingCollection.insertOne({
           ...booking,
           transectionId,
@@ -92,19 +98,15 @@ async function run() {
       });
     });
 
-    app.delete("/bookings/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await bookingCollection.deleteOne(query);
-      res.send(result);
-    });
-
     app.post("/payment/success", async (req, res) => {
       const { transectionId } = req.query;
+      console.log(req.query)
+
       const result = await bookingCollection.updateOne(
         { transectionId },
         { $set: { paid: true, paidAt: new Date() } }
       );
+      
       if (result.modifiedCount > 0) {
         res.redirect(`http://localhost:3000/payment/success?transectionId=${transectionId}`);
       }
@@ -112,13 +114,22 @@ async function run() {
 
     app.post("/payment/fail", async (req, res) => {
       const { transactionId } = req.query;
+
       if (!transactionId) {
         return res.redirect(`http://localhost:3000/payment/fail`);
       }
+
       const result = await bookingCollection.deleteOne({ transactionId });
       if (result.deletedCount) {
         res.redirect(`http://localhost:3000/payment/fail`);
       }
+    });
+
+    app.delete("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
     });
 
     app.get("/bookings/by-transaction-id/:id", async (req, res) => {
