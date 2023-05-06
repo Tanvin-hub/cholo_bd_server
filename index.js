@@ -58,9 +58,9 @@ async function run() {
         total_amount: totalAmount,
         currency: "BDT",
         tran_id: transectionId, // use unique tran_id for each api call
-        success_url: `http://localhost:3000/payment/success?transectionId=${transectionId}`,
-        fail_url: `http://localhost:3000/payment/fail?transectionId=${transectionId}`,
-        cancel_url: `http://localhost:3000/payment/cancel`,
+        success_url: `${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`,
+        fail_url: `${process.env.CLIENT_URL}/payment/fail?transectionId=${transectionId}`,
+        cancel_url: `${process.env.CLIENT_URL}/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: tourName,
@@ -108,7 +108,7 @@ async function run() {
       );
       
       if (result.modifiedCount > 0) {
-        res.redirect(`http://localhost:3000/payment/success?transectionId=${transectionId}`);
+        res.redirect(`${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`);
       }
     });
 
@@ -116,12 +116,12 @@ async function run() {
       const { transactionId } = req.query;
 
       if (!transactionId) {
-        return res.redirect(`http://localhost:3000/payment/fail`);
+        return res.redirect(`${process.env.CLIENT_URL}/payment/fail`);
       }
 
       const result = await bookingCollection.deleteOne({ transactionId });
       if (result.deletedCount) {
-        res.redirect(`http://localhost:3000/payment/fail`);
+        res.redirect(`${process.env.CLIENT_URL}/payment/fail`);
       }
     });
 
