@@ -4,11 +4,11 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 require("dotenv").config();
 
-// // SSL Commerce
-// const SSLCommerzPayment = require("sslcommerz-lts");
-// const store_id = process.env.STORE_ID;
-// const store_passwd = process.env.STORE_PASSWORD;
-// const is_live = false; //true for live, false for sandbox
+// SSL Commerce
+const SSLCommerzPayment = require("sslcommerz-lts");
+const store_id = process.env.STORE_ID;
+const store_passwd = process.env.STORE_PASSWORD;
+const is_live = false; //true for live, false for sandbox
 
 const port = process.env.PORT || 5000;
 
