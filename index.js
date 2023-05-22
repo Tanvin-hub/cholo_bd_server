@@ -153,6 +153,7 @@ async function run() {
       res.send(result);
     });
 
+    // All users
     app.get("/all-users", async (req, res) => {
       const query = {};
       const result = await usersCollection.find(query).toArray();
@@ -254,6 +255,20 @@ async function run() {
       const query = {};
       const booked = await bookedDataCollection.find(query).toArray();
       res.send(booked);
+    });
+
+    // Admin Trips
+    app.get("/admin/trips", async (req, res) => {
+      let query = {};
+      const cursor = tripsCollection.find(query);
+      const trips = await cursor.toArray();
+      res.send(trips);
+    });
+
+    app.post("/admin/trips", async (req, res) => {
+      const trips = req.body;
+      const result = await tripsCollection.insertOne(trips);
+      res.send(result);
     });
 
     // Admin upload Services
