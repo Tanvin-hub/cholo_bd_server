@@ -32,6 +32,7 @@ async function run() {
     const offersCollection = client.db("cholo-BD").collection("offers");
     const offerBookingCollection = client.db("cholo-BD").collection("offerBooked");
     const adminServicesCollection = client.db("cholo-BD").collection("admin-services");
+    const adminTripsCollection = client.db("cholo-BD").collection("admin-trips");
     const bookingCollection = client.db("cholo-BD").collection("bookings");
 
     // Orders
@@ -178,6 +179,20 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const trip = await tripsCollection.findOne(query);
       res.send(trip);
+    });
+
+    // Trips upload Services
+    app.get("/admin/trips", async (req, res) => {
+      let query = {};
+      const cursor = adminTripsCollection.find(query);
+      const trips = await cursor.toArray();
+      res.send(trips);
+    });
+
+    app.post("/admin/trips", async (req, res) => {
+      const trips = req.body;
+      const result = await adminTripsCollection.insertOne(trips);
+      res.send(result);
     });
 
     // Trip Details Tabs
