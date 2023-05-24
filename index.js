@@ -32,7 +32,6 @@ async function run() {
     const offersCollection = client.db("cholo-BD").collection("offers");
     const offerBookingCollection = client.db("cholo-BD").collection("offerBooked");
     const adminServicesCollection = client.db("cholo-BD").collection("admin-services");
-    const adminTripsCollection = client.db("cholo-BD").collection("admin-trips");
     const bookingCollection = client.db("cholo-BD").collection("bookings");
 
     // Orders
@@ -181,19 +180,19 @@ async function run() {
       res.send(trip);
     });
 
-    // Trips upload Services
-    app.get("/admin/trips", async (req, res) => {
-      let query = {};
-      const cursor = adminTripsCollection.find(query);
-      const trips = await cursor.toArray();
-      res.send(trips);
-    });
+   // Admin Trips
+   app.get("/admin/trips", async (req, res) => {
+    let query = {};
+    const cursor = tripsCollection.find(query);
+    const trips = await cursor.toArray();
+    res.send(trips);
+  });
 
-    app.post("/admin/trips", async (req, res) => {
-      const trips = req.body;
-      const result = await adminTripsCollection.insertOne(trips);
-      res.send(result);
-    });
+  app.post("/admin/trips", async (req, res) => {
+    const trips = req.body;
+    const result = await tripsCollection.insertOne(trips);
+    res.send(result);
+  });
 
     // Trip Details Tabs
     app.get("/tabs", async (req, res) => {
@@ -215,6 +214,23 @@ async function run() {
       const trip = await offersCollection.findOne(query);
       res.send(trip);
     });
+
+
+    // Admin Offers
+   app.get("/admin/offers", async (req, res) => {
+    let query = {};
+    const cursor = offersCollection.find(query);
+    const offers = await cursor.toArray();
+    res.send(offers);
+  });
+
+  app.post("/admin/offers", async (req, res) => {
+    const offers = req.body;
+    const result = await offersCollection.insertOne(offers);
+    res.send(result);
+  });
+
+
 
     // Reviews Collection
     app.get("/testimonials", async (req, res) => {
