@@ -28,10 +28,16 @@ async function run() {
     const usersCollection = client.db("cholo-BD").collection("users");
     const tripsCollection = client.db("cholo-BD").collection("trips");
     const tabsCollection = client.db("cholo-BD").collection("tabs");
-    const testimonialCollection = client.db("cholo-BD").collection("testimonials");
+    const testimonialCollection = client
+      .db("cholo-BD")
+      .collection("testimonials");
     const offersCollection = client.db("cholo-BD").collection("offers");
-    const offerBookingCollection = client.db("cholo-BD").collection("offerBooked");
-    const adminServicesCollection = client.db("cholo-BD").collection("admin-services");
+    const offerBookingCollection = client
+      .db("cholo-BD")
+      .collection("offerBooked");
+    const adminServicesCollection = client
+      .db("cholo-BD")
+      .collection("admin-services");
     const bookingCollection = client.db("cholo-BD").collection("bookings");
 
     // Orders
@@ -43,10 +49,10 @@ async function run() {
 
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
-      const {userEmail, tourName, fullName, phone, totalAmount } = booking;
+      const { userEmail, tourName, fullName, phone, totalAmount } = booking;
 
-      if(!userEmail || !tourName) {
-        return res.send({ error: "Please provide all the information"});
+      if (!userEmail || !tourName) {
+        return res.send({ error: "Please provide all the information" });
       }
 
       const bookingProduct = await tripsCollection.findOne({
@@ -100,15 +106,17 @@ async function run() {
 
     app.post("/payment/success", async (req, res) => {
       const { transectionId } = req.query;
-      console.log(req.query)
+      console.log(req.query);
 
       const result = await bookingCollection.updateOne(
         { transectionId },
         { $set: { paid: true, paidAt: new Date() } }
       );
-      
+
       if (result.modifiedCount > 0) {
-        res.redirect(`${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`);
+        res.redirect(
+          `${process.env.CLIENT_URL}/payment/success?transectionId=${transectionId}`
+        );
       }
     });
 
@@ -180,20 +188,30 @@ async function run() {
       res.send(trip);
     });
 
-   // Admin Trips
-   app.get("/admin/trips", async (req, res) => {
-    let query = {};
-    const cursor = tripsCollection.find(query);
-    const trips = await cursor.toArray();
-    res.send(trips);
-  });
+    // Admin Trips
+    app.get("/admin/trips", async (req, res) => {
+      let query = {};
+      const cursor = tripsCollection.find(query);
+      const trips = await cursor.toArray();
+      res.send(trips);
+    });
 
-  app.post("/admin/trips", async (req, res) => {
-    const trips = req.body;
-    const result = await tripsCollection.insertOne(trips);
-    res.send(result);
-  });
+    app.post("/admin/trips", async (req, res) => {
+      const trips = req.body;
+      const result = await tripsCollection.insertOne(trips);
+      res.send(result);
+    });
 
+    // Trip data from admin panel
+    app.delete("/trips/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await tripsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+
+    
     // Trip Details Tabs
     app.get("/tabs", async (req, res) => {
       const query = {};
@@ -215,22 +233,19 @@ async function run() {
       res.send(trip);
     });
 
-
     // Admin Offers
-   app.get("/admin/offers", async (req, res) => {
-    let query = {};
-    const cursor = offersCollection.find(query);
-    const offers = await cursor.toArray();
-    res.send(offers);
-  });
+    app.get("/admin/offers", async (req, res) => {
+      let query = {};
+      const cursor = offersCollection.find(query);
+      const offers = await cursor.toArray();
+      res.send(offers);
+    });
 
-  app.post("/admin/offers", async (req, res) => {
-    const offers = req.body;
-    const result = await offersCollection.insertOne(offers);
-    res.send(result);
-  });
-
-
+    app.post("/admin/offers", async (req, res) => {
+      const offers = req.body;
+      const result = await offersCollection.insertOne(offers);
+      res.send(result);
+    });
 
     // Reviews Collection
     app.get("/testimonials", async (req, res) => {
