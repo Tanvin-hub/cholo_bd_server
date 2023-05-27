@@ -209,8 +209,6 @@ async function run() {
       const result = await tripsCollection.deleteOne(query);
       res.send(result);
     });
-
-
     
     // Trip Details Tabs
     app.get("/tabs", async (req, res) => {
@@ -244,6 +242,14 @@ async function run() {
     app.post("/admin/offers", async (req, res) => {
       const offers = req.body;
       const result = await offersCollection.insertOne(offers);
+      res.send(result);
+    });
+
+    // Remove admin dashboard offers
+    app.delete("/offers/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await offersCollection.deleteOne(query);
       res.send(result);
     });
 
